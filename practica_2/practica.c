@@ -16,16 +16,15 @@ void showMatrix(int (*)[9]);
 
 int main(int argc, char const *argv[])
 {
-  pid_t process1, process2, process3;
-  int statusProcess1, statusProcess2, statusProcess3;
+  pid_t process;
 
   int sharedMemoryIdMatrix = createSharedMemory(sizeof(int[3][9]));
-  int sharedMemoryResults = createSharedMemory(sizeof(int[3]));
+  int sharedMemoryIdResults = createSharedMemory(sizeof(int[3]));
 
   int semafore = createSemafore(1);
 
   int(*matrix)[9] = (int(*)[9])shmat(sharedMemoryIdMatrix, NULL, 0);
-  int *results = (int *)shmat(sharedMemoryResults, NULL, 0);
+  int *results = (int *)shmat(sharedMemoryIdResults, NULL, 0);
 
   fillMatrix(matrix);
   showMatrix(matrix);
@@ -38,78 +37,43 @@ int main(int argc, char const *argv[])
     exit(1);
   }
 
-  process1 = fork();
-  if (process1 == 0)
+  for (int i = 0; i < 3; i++)
   {
+    process = fork();
     int result = 0;
-    printf("\n[1]Hola soy el proceso hijo 1\n");
-    printf("\n\t[1]Mi identificador es: %d\n", getpid());
-    printf("\n\t[1]Mi proceso padre es: %d\n", getppid());
-
-    down(semafore);
-      printf("\n\t[1]SUMAR LO SIGUIENTE: ");
-      for (int i = 0; i < 9; i++)
-      {
-        int current = matrix[0][i];
-        printf("%d ", current);
-        result += current;
-      }
-      printf("\n");
-      results[0] = result;
-      printf("\n\t[1]El resultado de la suma de la fila 1 es %d \n", result);
-    up(semafore);
-    exit(0);
+    if(process == 0) {
+      printf("\n[%d]Hola soy el proceso hijo %d\n", i + 1, i + 1);
+      printf("\n\t[%d]Mi identificador es: %d\n", i + 1, getpid());
+      printf("\n\t[%d]Mi proceso padre es: %d\n",  i + 1, getppid());
+      up(semafore);
+        printf("\n\t[%d]SUMAR LO SIGUIENTE: ", i + 1);
+        for (int j = 0; j < 9; j++)
+        {
+          int current = matrix[i][j];
+          printf("%d ", current);
+          result += current;
+        }
+        printf("\n");
+        results[i] = result;
+        printf("\n\t[%d]El resultado de la suma de la fila %d es %d \n", i + 1 , i + 1, result);
+      down(semafore);
+      exit(0);
+    }
+    result = 0;
   }
-  waitpid(process1, &statusProcess1, 0);
-  process2 = fork();
-
-  if (process2 == 0)
-  {
-    int result = 0;
-    printf("\n[2]Hola soy el proceso hijo 2\n");
-    printf("\n\t[2]Mi identificador es: %d\n", getpid());
-    printf("\n\t[2]Mi proceso padre es: %d\n", getppid());
-    up(semafore);
-      printf("\n\t[2]SUMAR LO SIGUIENTE: ");
-      for (int i = 0; i < 9; i++)
-      {
-        int current = matrix[1][i];
-        printf("%d ", current);
-        result += current;
-      }
-      printf("\n");
-      results[1] = result;
-      printf("\n\t[2]El resultado de la suma de la fila 2 es %d \n", result);
-    down(semafore);
-    exit(0);
-  }
-  waitpid(process2, &statusProcess2, 0);
-  process3 = fork();
-
-  if (process3 == 0)
-  {
-    int result = 0;
-    printf("\n[3]Hola soy el proceso hijo 3\n");
-    printf("\n\t[3]Mi identificador es: %d\n", getpid());
-    printf("\n\t[3]Mi proceso padre es: %d\n", getppid());
-    up(semafore);
-      printf("\n\t[3]SUMAR LO SIGUIENTE: ");
-      for (int i = 0; i < 9; i++)
-      {
-        int current = matrix[2][i];
-        printf("%d ", current);
-        result += current;
-      }
-      printf("\n");
-      results[2] = result;
-      printf("\n\t[3]El resultado de la suma de la fila 3 es %d \n", result);
-    down(semafore);
-    exit(0);
-  }
-  waitpid(process3, &statusProcess3, 0);
+  
+  for(int i=0;i<3;i++)
+  wait(NULL);
+  
 
   printf("\nSoy el proceso padre\n");
   printf("Los resultados de la suma de las filas es (%d, %d, %d)\n", results[0], results[1], results[2]);
+
+  shmdt(matrix);
+  shmdt(results);
+  shmctl(sharedMemoryIdMatrix, IPC_RMID, NULL);
+  shmctl(sharedMemoryIdResults, IPC_RMID, NULL);
+  semctl(semafore, 0, IPC_RMID);
   return 0;
 }
 
@@ -131,8 +95,9 @@ int createSharedMemory(size_t size)
 int createSemafore(int initialValue)
 {
   key_t keyForSemafore = ftok("./token2", 'S');
-  int semaforeId = semget(keyForSemafore, 1, IPC_CREAT | 0644);
-  if(semaforeId == -1) {
+  int semaforeId = semget(keyForSemafore, -1, IPC_CREAT | 0644);
+  if (semaforeId == -1)
+  {
     return -1;
   }
 
@@ -187,5 +152,3 @@ void showMatrix(int (*matrix)[9])
     printf("\n");
   }
 }
-
-
