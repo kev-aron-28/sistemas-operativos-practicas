@@ -32,8 +32,9 @@ void *thread(void *args)
       printf("%d*", current);
     }
   }
-    printf("\n");
 
+  printf(" = %d", result);
+  printf("\n");
   pthread_mutex_lock(&mutex);
   op.results[indexToSaveResult] = result;
   pthread_mutex_unlock(&mutex);
@@ -46,7 +47,6 @@ int main()
   pthread_t threads[3];
   fillMatrix(op.arr);
   showMatrix(op.arr);
-  printf("\nCreacion del hilo...\n");
 
   pthread_mutex_init(&mutex, NULL);
 
