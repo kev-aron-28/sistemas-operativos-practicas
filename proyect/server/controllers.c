@@ -7,8 +7,11 @@
 STATUS registerUserController()
 {
 
-  User user = {"Kevin", "1234", "kevaron_28"};
-  User user1;
+  FILE * body = fopen("../shared/body.txt", "rb");
+  User user;
+  fread(&user, sizeof(User), 1, body);
+  fclose(body);
+
   FILE *usersFile = fopen("../shared/users.txt", "ab");
   if (usersFile == NULL)
   {
@@ -19,21 +22,10 @@ STATUS registerUserController()
   int flag = 0;
   flag = fwrite(&user, sizeof(User), 1, usersFile);
   fclose(usersFile);
-
-  usersFile = fopen("../shared/users.txt", "rb");
-  User read;
-  while (fread(&read, sizeof(User), 1, usersFile) == 1)
-  {
-    printf("Name: %s\n", read.name);
-    printf("password: %s\n", read.password);
-    printf("email %s\n", read.email);
-  }
-
   if (flag)
   {
     return OK;
   }
 
-  
   return INTERNAL_ERROR;
 }
