@@ -35,12 +35,18 @@ void *routing(void *args)
     response->statusCode = responseController;
     response->hasBody = 1;
   }
+
+  if(strcmp(request->requestPath, loginRoute) == 0) {
+    STATUS responseController = loginUserController();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
 }
 
 int main()
 {
-  sem_t *clients = sem_open(SEMAPHORE_NAME, O_CREAT | O_EXCL, 0666, 1);
-  
+  sem_t *clients = sem_open(SEMAPHORE_NAME_CLIENTS, O_CREAT | O_EXCL, 0666, 1);
+  sem_t *server = sem_open(SEMAPHORE_NAME_SERVER, O_CREAT | O_EXCL, 0666, 1);
   key_t keyForRequest = ftok(SHARED_MEMORY_FILE, 'b');
   
   int sharedMemoryRequest = shmget(
@@ -78,12 +84,26 @@ int main()
   {
     if (errno == EEXIST)
     {
-      clients = sem_open(SEMAPHORE_NAME, 0);
+      clients = sem_open(SEMAPHORE_NAME_CLIENTS, 0);
     }
     else
     {
       perror("sem_open");
-      sem_unlink(SEMAPHORE_NAME);
+      sem_unlink(SEMAPHORE_NAME_CLIENTS);
+      return 1;
+    }
+  }
+
+  if (clients == SEM_FAILED)
+  {
+    if (errno == EEXIST)
+    {
+      clients = sem_open(SEMAPHORE_NAME_CLIENTS, 0);
+    }
+    else
+    {
+      perror("sem_open");
+      sem_unlink(SEMAPHORE_NAME_CLIENTS);
       return 1;
     }
   }
@@ -99,15 +119,14 @@ int main()
   {
     pthread_t routingThread;
     pthread_t threadForReading;
-
     if (currentValue == 0)
     {
       printf("\n");
       printf("CONEXION AL SERVIDOR...\n");
       pthread_create(&routingThread, NULL, routing, request);
       pthread_join(routingThread, NULL);
-      *isResponseAvaible = 1;
       sem_post(clients);
+      *isResponseAvaible = 1;
       printf("CLIENTE DESPACHADO...\n");
       printf("\n");
     }

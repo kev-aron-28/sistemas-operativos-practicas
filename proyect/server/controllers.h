@@ -4,5 +4,7 @@
 #define CONTROLLERS_H
 
 STATUS registerUserController();
+STATUS loginUserController();
+STATUS createAuction();
 
 #endif

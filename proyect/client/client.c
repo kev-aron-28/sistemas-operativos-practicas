@@ -13,22 +13,57 @@
 #include "../lib/request.h"
 #include "../lib/response.h"
 #include "../lib/entities.h"
+#include "controllers.h"
 
-int main(int argc, char *argv[])
+int isUserAuthenticated = 0;
+User userCurrentlyAuth;
+
+int isBadResponse(STATUS status)
 {
-
-  if (argc != 2)
+  int bad = 0;
+  switch (status)
   {
-    printf("Debe de proporcionar la cadena al ejecutar el programa");
-    return 1;
+  case BAD_REQUEST:
+  case INTERNAL_ERROR:
+  case UNAUTHORIZED:
+  case NOT_FOUND:
+    bad = 1;
+    break;
   }
+  return bad;
+}
 
-  char *inputString = argv[1];
-  sem_t *clients = sem_open(SEMAPHORE_NAME, 0);
-  key_t keyForRequest = ftok(SHARED_MEMORY_FILE, 'b');
-  int requestMemoryId = shmget(keyForRequest, sizeof(REQUEST), IPC_CREAT | 0777);
-  REQUEST *request = (REQUEST *)shmat(requestMemoryId, NULL, 0);
+void manageResponse(char route[256])
+{
+  key_t keyForSharedMemory = ftok(SHARED_MEMORY_FILE, 'r');
+  int sharedMemoryId = shmget(
+      keyForSharedMemory,
+      sizeof(RESPONSE),
+      IPC_CREAT | 0777);
+  RESPONSE *response = (RESPONSE *)shmat(sharedMemoryId, NULL, 0);
 
+  FILE *body = fopen("../shared/body.txt", "rb");
+  Error error;
+
+  if (isBadResponse(response->statusCode))
+  {
+    fread(&error, sizeof(Error), 1, body);
+    printf("Mensaje: %s", error.message);
+  }
+  else
+  {
+    if (strcmp(route, loginRoute) == 0 || strcmp(route, registerRoute) == 0)
+    {
+
+      fread(&userCurrentlyAuth, sizeof(User), 1, body);
+      isUserAuthenticated = 1;
+      printf("USUARIO AUTENTICADO %s", userCurrentlyAuth.id);
+    }
+  }
+}
+
+void waitForAnswer()
+{
   key_t keyForResponseAvailable = ftok(SHARED_MEMORY_FILE, 'z');
   int sharedMemoryReponseAvailable = shmget(
       keyForResponseAvailable,
@@ -40,40 +75,89 @@ int main(int argc, char *argv[])
       NULL,
       IPC_CREAT | 0777);
 
-  key_t keyForSharedMemory = ftok(SHARED_MEMORY_FILE, 'r');
-  int sharedMemoryResponse = shmget(
-      keyForSharedMemory,
-      sizeof(RESPONSE),
-      IPC_CREAT | 0777);
-  RESPONSE *response = (RESPONSE *)shmat(sharedMemoryResponse, NULL, 0);
+  printf("\nESPERANDO RESPUESTA...\n");
+  while (*isResponseAvaible != 1){}
+  *isResponseAvaible = 0;
+}
 
+int isAuthenticated() {
+  if(isUserAuthenticated == 0) {
+    printf("Autenticacion necesaria\n");
+    return 0;
+  }
+
+  return 1;
+}
+
+int main(int argc, char *argv[])
+{
+
+  sem_t *clients = sem_open(SEMAPHORE_NAME_CLIENTS, 0);
+  key_t keyForRequest = ftok(SHARED_MEMORY_FILE, 'b');
+  int requestMemoryId = shmget(keyForRequest, sizeof(REQUEST), IPC_CREAT | 0777);
+  REQUEST *request = (REQUEST *)shmat(requestMemoryId, NULL, 0);
   printf("ESPERANDO CONEXION AL SERVIDOR...\n");
-  sem_wait(clients);
 
-  if (strcmp(inputString, registerRoute) == 0)
+  int keepMenu = 1;
+  int choice;
+
+  do
   {
-    request->method = POST;
-    strcpy(request->requestPath, inputString);
-    printf("hola mundo");
-    User user = {"Aron", "1234", "kevaron_28"};
-    FILE *body = fopen("../shared/body.txt", "ab");
-    if (body == NULL)
+    printf("\n");
+    printf("peticiones: \n");
+    printf("%s [1] POST \n", registerRoute);
+    printf("%s [2] POST\n", loginRoute);
+    printf("%s [3] POST \n", createAuction);
+    printf("\n");
+
+    printf("OPCION: ");
+    scanf("%d", &choice);
+    printf("\n");
+    FILE *body = fopen("../shared/body.txt", "wb");
+    switch (choice)
     {
-      printf("Error al abrir el archivo.\n");
-      return INTERNAL_ERROR;
+    case 1:
+      request->method = POST;
+      strcpy(request->requestPath, registerRoute);
+      User user = registerUserController();
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo.\n");
+        return INTERNAL_ERROR;
+      }
+
+      int flag = 0;
+      flag = fwrite(&user, sizeof(User), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 2:
+      request->method = POST;
+      strcpy(request->requestPath, loginRoute);
+      Login login = loginUserController();
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo.\n");
+        return INTERNAL_ERROR;
+      }
+
+      fwrite(&login, sizeof(Login), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 3: 
+      if(!isAuthenticated()) break;
+      printf("NO DEBE LLEGAR AQUI");
+      break;
+    default:
+      break;
     }
+    printf("\n");
+  } while (keepMenu);
 
-    int flag = 0;
-    flag = fwrite(&user, sizeof(User), 1, body);
-    fclose(body);
-  }
-
-  printf("ESPERANDO RESPUESTA...\n");
-  while (*isResponseAvaible != 1)
-  {
-  }
-
-  printf("ESTATUS %d\n", response->statusCode);
-  printf("PETICION RECIBIDA \n");
   return 0;
 }

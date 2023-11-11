@@ -3,7 +3,7 @@
 
 #define SHARED_MEMORY_FILE "../shared/sharedMemory.txt"
 #define JSON_BODY_FILE "../shared/body.txt"
-#define SEMAPHORE_NAME "/client_semaphore"
+#define SEMAPHORE_NAME_CLIENTS "/clients_semaphore"
+#define SEMAPHORE_NAME_SERVER "/server_semaphore"
 #define USER_FILE "../shared/users.txt"
-
 #endif

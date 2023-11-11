@@ -1,7 +1,12 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
+// Auth
 #define registerRoute "/register"
+#define loginRoute "/login"
+
+// Auction
+#define createAuction "/auction/create"
 
 enum methods {
   GET,
