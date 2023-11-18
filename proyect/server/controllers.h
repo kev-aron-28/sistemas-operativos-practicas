@@ -5,6 +5,8 @@
 
 STATUS registerUserController();
 STATUS loginUserController();
-STATUS createAuction();
+STATUS createAuctionController();
+STATUS getAllAuctionsController();
+STATUS bidToAuctionController();
 
 #endif

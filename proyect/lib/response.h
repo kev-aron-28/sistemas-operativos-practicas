@@ -17,9 +17,4 @@ typedef struct response {
   int hasBody;
 } RESPONSE;
 
-STATUS getStatus(RESPONSE*);
-int hasBody(RESPONSE*);
-
-void setStatus(RESPONSE*, STATUS);
-void setBody(RESPONSE*, int);
 #endif

@@ -27,7 +27,7 @@ void *routing(void *args)
     IPC_CREAT | 0777
   );
   RESPONSE *response = (RESPONSE *)shmat(sharedMemoryId, NULL, 0);
-  response->statusCode = OK;
+  response->statusCode = NOT_FOUND;
   response->hasBody = 0;
 
   if(strcmp(request->requestPath, registerRoute) == 0) {
@@ -38,6 +38,24 @@ void *routing(void *args)
 
   if(strcmp(request->requestPath, loginRoute) == 0) {
     STATUS responseController = loginUserController();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
+  if(strcmp(request->requestPath, createAuction) == 0) {
+    STATUS responseController = createAuctionController();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
+  if(strcmp(request->requestPath, getAllAuctionsRoute) == 0) {
+    STATUS responseController = getAllAuctionsController();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
+  if(strcmp(request->requestPath, bidToAuction) == 0) {
+    STATUS responseController = bidToAuctionController();
     response->statusCode = responseController;
     response->hasBody = 1;
   }
@@ -118,7 +136,6 @@ int main()
   do
   {
     pthread_t routingThread;
-    pthread_t threadForReading;
     if (currentValue == 0)
     {
       printf("\n");

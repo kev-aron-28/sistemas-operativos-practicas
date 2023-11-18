@@ -29,18 +29,17 @@ typedef struct token {
 typedef struct auction {
   char title[100];
   int isActive;
-  long float actualBid;
-  uuid_t lastBidderId;
+  float actualBid;
+  char lastBidderId[100];
   char id[37];
   char ownerId[37];
-  char seller[200];
+  char sellerName[200];
 } Auction;
 
-char * getName(User *);
-char * getPassword(User*);
-char * getEmail(User *);
-void setName(User *, char name[100]);
-void setPassword(User *, char password[20]);
-void setEmail(User *, char email[100]);
+typedef struct bid {
+  char bidderId[37];
+  char auctionId[37];
+  float bid;
+} Bid;
 
 #endif

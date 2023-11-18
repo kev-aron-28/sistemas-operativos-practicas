@@ -35,6 +35,7 @@ int isBadResponse(STATUS status)
 
 void manageResponse(char route[256])
 {
+  
   key_t keyForSharedMemory = ftok(SHARED_MEMORY_FILE, 'r');
   int sharedMemoryId = shmget(
       keyForSharedMemory,
@@ -59,6 +60,28 @@ void manageResponse(char route[256])
       isUserAuthenticated = 1;
       printf("USUARIO AUTENTICADO %s", userCurrentlyAuth.id);
     }
+
+    if (strcmp(route, getAllAuctionsRoute) == 0)
+    {
+      Auction readAuction;
+      printf("SUBASTAS DISPONIBLES \n");
+      while (fread(&readAuction, sizeof(Auction), 1, body) == 1)
+      {
+        printf("\n");
+        printf("ID: %s \n", readAuction.id);
+        printf("TITULO: %s \n", readAuction.title);
+        printf("PUJA ACTUAL: %f \n", readAuction.actualBid);
+        printf("VENDEDOR: %s \n", readAuction.sellerName);
+        printf("\n");
+      }
+      fclose(body);
+    }
+
+    if (strcmp(route, bidToAuction) == 0)
+    {
+      printf("HAZ HECHO TU OFERTA\n");
+      fclose(body);
+    }
   }
 }
 
@@ -76,12 +99,16 @@ void waitForAnswer()
       IPC_CREAT | 0777);
 
   printf("\nESPERANDO RESPUESTA...\n");
-  while (*isResponseAvaible != 1){}
+  while (*isResponseAvaible != 1)
+  {
+  }
   *isResponseAvaible = 0;
 }
 
-int isAuthenticated() {
-  if(isUserAuthenticated == 0) {
+int isAuthenticated()
+{
+  if (isUserAuthenticated == 0)
+  {
     printf("Autenticacion necesaria\n");
     return 0;
   }
@@ -108,6 +135,8 @@ int main(int argc, char *argv[])
     printf("%s [1] POST \n", registerRoute);
     printf("%s [2] POST\n", loginRoute);
     printf("%s [3] POST \n", createAuction);
+    printf("%s [4] GET\n", getAllAuctionsRoute);
+    printf("%s [5] PUT\n", bidToAuction);
     printf("\n");
 
     printf("OPCION: ");
@@ -149,9 +178,50 @@ int main(int argc, char *argv[])
       waitForAnswer();
       manageResponse(request->requestPath);
       break;
-    case 3: 
-      if(!isAuthenticated()) break;
-      printf("NO DEBE LLEGAR AQUI");
+    case 3:
+      if (!isAuthenticated())
+        break;
+      request->method = POST;
+      strcpy(request->requestPath, createAuction);
+      Auction auction = createAuctionController(userCurrentlyAuth);
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo.\n");
+        return INTERNAL_ERROR;
+      }
+
+      fwrite(&auction, sizeof(Auction), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 4:
+      if (!isAuthenticated())
+        break;
+      request->method = POST;
+      strcpy(request->requestPath, getAllAuctionsRoute);
+      sem_wait(clients);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 5:
+      if (!isAuthenticated())
+        break;
+      request->method = PUT;
+      strcpy(request->requestPath, bidToAuction);
+      Bid bid = bidToAuctionController(userCurrentlyAuth);
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo.\n");
+        return INTERNAL_ERROR;
+      }
+
+      fwrite(&bid, sizeof(Bid), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
       break;
     default:
       break;

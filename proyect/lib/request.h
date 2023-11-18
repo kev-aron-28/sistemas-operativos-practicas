@@ -7,6 +7,8 @@
 
 // Auction
 #define createAuction "/auction/create"
+#define getAllAuctionsRoute "/auction/all"
+#define bidToAuction "/auction/:id"
 
 enum methods {
   GET,
@@ -20,10 +22,4 @@ typedef struct request {
   char requestPath[256];
   METHODS method;
 } REQUEST;
-
-char * getRequestPathFrom(REQUEST*);
-METHODS getMethodFrom(REQUEST*);
-
-void setRequestPath(char *);
-void setMethod(METHODS);
 #endif
