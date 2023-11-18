@@ -1,6 +1,5 @@
 #include <string.h>
 #include <ncurses.h>
-#include <openssl/sha.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
