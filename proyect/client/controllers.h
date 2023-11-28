@@ -6,4 +6,5 @@ User registerUserController();
 Login loginUserController();
 Auction createAuctionController(User);
 Bid bidToAuctionController(User);
+EndAuctionById endAuctionByIdController(User);
 #endif

@@ -59,6 +59,25 @@ void *routing(void *args)
     response->statusCode = responseController;
     response->hasBody = 1;
   }
+
+  if(strcmp(request->requestPath, getMyAuctions) == 0) {
+    STATUS responseController = getAuctionsByOwnerId();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
+  if(strcmp(request->requestPath, endAuction) == 0) {
+    STATUS responseController = endAuctionController();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
+  if(strcmp(request->requestPath, wonAuction) == 0) {
+    STATUS responseController = getAuctionsWonByUserId();
+    response->statusCode = responseController;
+    response->hasBody = 1;
+  }
+
 }
 
 int main()
@@ -132,6 +151,8 @@ int main()
     perror("sem_getvalue");
     exit(1);
   }
+
+  printf("SERVER RUNNING\n");
 
   do
   {

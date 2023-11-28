@@ -9,6 +9,9 @@
 #define createAuction "/auction/create"
 #define getAllAuctionsRoute "/auction/all"
 #define bidToAuction "/auction/:id"
+#define getMyAuctions "/auction/myAuctions"
+#define endAuction "/auction/:id/end"
+#define wonAuction "/auction/won"
 
 enum methods {
   GET,

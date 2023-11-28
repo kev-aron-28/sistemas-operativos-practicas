@@ -18,6 +18,28 @@
 int isUserAuthenticated = 0;
 User userCurrentlyAuth;
 
+void printMenu()
+{
+  printf("\n");
+  printf("peticiones:\n");
+  printf("%s [1] POST\n", registerRoute);
+  printf("%s [2] POST\n", loginRoute);
+  printf("%s [3] POST\n", createAuction);
+  printf("%s [4] GET\n", getAllAuctionsRoute);
+  printf("%s [5] PUT\n", bidToAuction);
+  printf("%s [6] GET\n", getMyAuctions);
+  printf("%s [7] PUT\n", endAuction);  
+  printf("%s [8] GET\n", wonAuction);
+  printf("\n");
+}
+
+int menuChoice() {
+  int choice;
+  printf("OPCION: ");
+  scanf("%d", &choice);
+  return choice;
+}
+
 int isBadResponse(STATUS status)
 {
   int bad = 0;
@@ -35,7 +57,7 @@ int isBadResponse(STATUS status)
 
 void manageResponse(char route[256])
 {
-  
+
   key_t keyForSharedMemory = ftok(SHARED_MEMORY_FILE, 'r');
   int sharedMemoryId = shmget(
       keyForSharedMemory,
@@ -58,20 +80,20 @@ void manageResponse(char route[256])
 
       fread(&userCurrentlyAuth, sizeof(User), 1, body);
       isUserAuthenticated = 1;
-      printf("USUARIO AUTENTICADO %s", userCurrentlyAuth.id);
+      printf("\tUSUARIO AUTENTICADO %s", userCurrentlyAuth.id);
     }
 
     if (strcmp(route, getAllAuctionsRoute) == 0)
     {
       Auction readAuction;
-      printf("SUBASTAS DISPONIBLES \n");
+      printf("\tSUBASTAS DISPONIBLES: \n");
       while (fread(&readAuction, sizeof(Auction), 1, body) == 1)
       {
         printf("\n");
-        printf("ID: %s \n", readAuction.id);
-        printf("TITULO: %s \n", readAuction.title);
-        printf("PUJA ACTUAL: %f \n", readAuction.actualBid);
-        printf("VENDEDOR: %s \n", readAuction.sellerName);
+        printf("\tID: %s \n", readAuction.id);
+        printf("\tTITULO: %s \n", readAuction.title);
+        printf("\tPUJA ACTUAL: $%.2f \n", readAuction.actualBid);
+        printf("\tVENDEDOR: %s \n", readAuction.sellerName);
         printf("\n");
       }
       fclose(body);
@@ -79,7 +101,48 @@ void manageResponse(char route[256])
 
     if (strcmp(route, bidToAuction) == 0)
     {
-      printf("HAZ HECHO TU OFERTA\n");
+      printf("\tHAZ HECHO TU OFERTA\n");
+      fclose(body);
+    }
+
+    if (strcmp(route, getMyAuctions) == 0)
+    {
+      Auction readAuction;
+      printf("\tTUS SUBASTAS: \n");
+      while (fread(&readAuction, sizeof(Auction), 1, body) == 1)
+      {
+        printf("\n");
+        printf("\tID: %s \n", readAuction.id);
+        printf("\tTITULO: %s \n", readAuction.title);
+        printf("\tPUJA ACTUAL: $%.2f \n", readAuction.actualBid);
+        printf("\tVENDEDOR: %s \n", readAuction.sellerName);
+        printf("\tULTIMO PUJADOR: %s\n", readAuction.lastBidderId);
+        printf("\tACTIVA %d", readAuction.isActive);
+        printf("\n");
+      }
+      fclose(body);
+    }
+
+    if(strcmp(route, endAuction) == 0) {
+      BodyMessage message;
+      printf("ENDING AUCTION\n");
+      fread(&message, sizeof(BodyMessage), 1, body);
+      printf("Mensaje: %s", message.message);
+      fclose(body);
+    }
+
+    if(strcmp(route, wonAuction) == 0) {
+      Auction readAuction;
+      printf("\tTUS SUBASTAS GANADAS: \n");
+      while (fread(&readAuction, sizeof(Auction), 1, body) == 1)
+      {
+        printf("\n");
+        printf("\tID: %s \n", readAuction.id);
+        printf("\tTITULO: %s \n", readAuction.title);
+        printf("\tULTIMA PUJA ACTUAL: $%.2f \n", readAuction.actualBid);
+        printf("\tVENDEDOR: %s \n", readAuction.sellerName);
+        printf("\n");
+      }
       fclose(body);
     }
   }
@@ -130,18 +193,8 @@ int main(int argc, char *argv[])
 
   do
   {
-    printf("\n");
-    printf("peticiones: \n");
-    printf("%s [1] POST \n", registerRoute);
-    printf("%s [2] POST\n", loginRoute);
-    printf("%s [3] POST \n", createAuction);
-    printf("%s [4] GET\n", getAllAuctionsRoute);
-    printf("%s [5] PUT\n", bidToAuction);
-    printf("\n");
-
-    printf("OPCION: ");
-    scanf("%d", &choice);
-    printf("\n");
+    printMenu();
+    choice = menuChoice();
     FILE *body = fopen("../shared/body.txt", "wb");
     switch (choice)
     {
@@ -156,8 +209,7 @@ int main(int argc, char *argv[])
         return INTERNAL_ERROR;
       }
 
-      int flag = 0;
-      flag = fwrite(&user, sizeof(User), 1, body);
+      fwrite(&user, sizeof(User), 1, body);
       fclose(body);
       waitForAnswer();
       manageResponse(request->requestPath);
@@ -223,7 +275,62 @@ int main(int argc, char *argv[])
       waitForAnswer();
       manageResponse(request->requestPath);
       break;
+    case 6:
+      if (!isAuthenticated())
+        break;
+      request->method = GET;
+      strcpy(request->requestPath, getMyAuctions);
+      GetAuctionsByOwnerId myAuctions;
+      strcpy(myAuctions.ownerId, userCurrentlyAuth.id);
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo.\n");
+        return INTERNAL_ERROR;
+      }
+
+      fwrite(&myAuctions, sizeof(GetAuctionsByOwnerId), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 7:
+      if (!isAuthenticated())
+        break;
+      request->method = PUT;
+      strcpy(request->requestPath, endAuction);
+      EndAuctionById auctionToEnd = endAuctionByIdController(userCurrentlyAuth);
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo\n");
+        return INTERNAL_ERROR;
+      }
+      fwrite(&auctionToEnd, sizeof(EndAuctionById), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
+    case 8:
+      if (!isAuthenticated())
+        break;
+      request->method = GET;
+      strcpy(request->requestPath, wonAuction);
+      GetAuctionsByOwnerId userToFilterAuctions;
+      strcpy(userToFilterAuctions.ownerId, userCurrentlyAuth.id);
+      sem_wait(clients);
+      if (body == NULL)
+      {
+        printf("Error al abrir el archivo\n");
+        return INTERNAL_ERROR;
+      }
+      fwrite(&userToFilterAuctions, sizeof(GetAuctionsByOwnerId), 1, body);
+      fclose(body);
+      waitForAnswer();
+      manageResponse(request->requestPath);
+      break;
     default:
+      printf("DEBES SELECCIONAR UNA OPCION CORRECTA \n");
       break;
     }
     printf("\n");

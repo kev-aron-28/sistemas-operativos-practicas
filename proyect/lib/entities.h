@@ -1,12 +1,13 @@
 #ifndef ENTITIES_H
 #define ENTITIES_H
+#define ID_LEN 37
 #include <uuid/uuid.h> //sudo apt-get install uuid-dev
 
 typedef struct user {
   char name[100];
   char password[20];
   char email[100];
-  char id[37];
+  char id[ID_LEN];
 } User;
 
 typedef struct error {
@@ -31,15 +32,23 @@ typedef struct auction {
   int isActive;
   float actualBid;
   char lastBidderId[100];
-  char id[37];
-  char ownerId[37];
+  char id[ID_LEN];
+  char ownerId[ID_LEN];
   char sellerName[200];
 } Auction;
 
 typedef struct bid {
-  char bidderId[37];
-  char auctionId[37];
+  char bidderId[ID_LEN];
+  char auctionId[ID_LEN];
   float bid;
 } Bid;
 
+typedef struct getAuctionByOwnerId {
+  char ownerId[ID_LEN];
+} GetAuctionsByOwnerId;
+
+typedef struct endAuctionById {
+  char auctionId[ID_LEN];
+  char userId[ID_LEN ];
+} EndAuctionById;
 #endif

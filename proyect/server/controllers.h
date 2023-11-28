@@ -8,5 +8,8 @@ STATUS loginUserController();
 STATUS createAuctionController();
 STATUS getAllAuctionsController();
 STATUS bidToAuctionController();
+STATUS endAuctionController();
+STATUS getAuctionsByOwnerId();
+STATUS getAuctionsWonByUserId();
 
 #endif
